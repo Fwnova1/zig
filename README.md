@@ -43,6 +43,13 @@ This task proves that execution can jump backward in time by restoring CPU state
 
 * * *
 
+Expected Output
+--------------
+
+![Program output screenshot](img/task1a.png)
+
+* * *
+
 Task 1b – Switching to a New Stack
 ----------------------------------
 
@@ -52,12 +59,26 @@ Calling `set_context` transfers execution to this new function as if it were a n
 
 * * *
 
+Expected Output
+--------------
+
+![Program output screenshot](img/task1b.png)
+
+* * *
+
 Task 1c – Chaining Context Switches
 -----------------------------------
 
 Task 1c extends the previous idea by creating two independent execution contexts. Execution begins in one function (`foo`) and then switches directly into another function (`goo`) using `set_context`, without returning.
 
 This task demonstrates that multiple independent execution contexts can exist and transfer control explicitly. It forms the conceptual basis for implementing fibers.
+
+* * *
+
+Expected Output
+--------------
+
+![Program output screenshot](img/task1c.png)
 
 * * *
 
@@ -77,6 +98,13 @@ The scheduler maintains a queue of fibers and a scheduler context. It switches i
 The main program initializes the scheduler, creates two fibers with separate stacks, and passes shared data to them. Each fiber runs to completion before returning control to the scheduler.
 
 This task establishes a minimal but functional fiber scheduler where fibers run sequentially.
+
+* * *
+
+Expected Output
+--------------
+
+![Program output screenshot](img/task2.png)
 
 * * *
 
@@ -103,22 +131,23 @@ Two fibers share an integer value. The first fiber modifies the value, yields, t
 
 * * *
 
-Build and Run
--------------
+Expected Output
+--------------
 
-zig build
-zig build run-task1
-zig build run-task2
-zig build run-task3
+![Program output screenshot](img/task3.png)
 
 * * *
 
-Output Example
---------------
+Build and Run
+-------------
 
-(Screenshot placeholder)
+zig build \n
+zig build run-task1a \n
+zig build run-task1b \n
+zig build run-task1c \n
+zig build run-task2 \n
+zig build run-task3 \n
 
-![Program output screenshot](screenshot.png)
 
 * * *
 
