@@ -141,13 +141,11 @@ Expected Output
 Build and Run
 -------------
 
-zig build  
 zig build run-task1a  
 zig build run-task1b  
 zig build run-task1c  
 zig build run-task2  
 zig build run-task3  
-
 
 * * *
 
