@@ -40,17 +40,15 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // =====================================================
     //     Shared context module
-    // =====================================================
+
     const context_mod = b.addModule("context_mod", .{
         .root_source_file = b.path("src/context.zig"),
         .target = target,
     });
 
-    // =====================================================
     //     Task 2 fiber + scheduler
-    // =====================================================
+
     const fiber_mod2 = b.addModule("fiber_mod2", .{
         .root_source_file = b.path("src/task2/fiber.zig"),
         .target = target,
@@ -66,9 +64,8 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    // =====================================================
     //     Task 3 fiber + scheduler
-    // =====================================================
+
     const fiber_mod3 = b.addModule("fiber_mod3", .{
         .root_source_file = b.path("src/task3/fiber.zig"),
         .target = target,
@@ -84,9 +81,8 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    // =====================================================
     //     TASK 1  (ONLY context needed)
-    // =====================================================
+
     addTask(
         b,
         target,
@@ -117,9 +113,8 @@ pub fn build(b: *std.Build) void {
         true,
     );
 
-    // =====================================================
     //     TASK 2 MAIN
-    // =====================================================
+
     addTask(
         b,
         target,
@@ -134,9 +129,8 @@ pub fn build(b: *std.Build) void {
         true,
     );
 
-    // =====================================================
     //     TASK 2 TESTS
-    // =====================================================
+
     const test_mod2 = b.createModule(.{
         .root_source_file = b.path("src/task2/main.zig"),
         .target = target,
@@ -155,9 +149,8 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test-task2", "Run Task 2 tests");
     test_step.dependOn(&tests.step);
 
-    // =====================================================
     //     TASK 3 MAIN
-    // =====================================================
+
     addTask(
         b,
         target,
