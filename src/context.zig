@@ -1,4 +1,3 @@
-// src/context.zig
 const std = @import("std");
 
 /// Execution context saved/restored by the assembly library
@@ -13,12 +12,5 @@ pub const Context = extern struct {
     r15: ?*u64,
 };
 
-/// Save current execution context
-/// Returns:
-///   0  - first time
-///   >0 - after set_context
 pub extern fn get_context(c: [*c]Context) i32;
-
-/// Restore a previously saved context
-/// Does not return
 pub extern fn set_context(c: [*c]Context) void;

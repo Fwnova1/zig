@@ -1,127 +1,114 @@
- Zig Fiber Scheduler – Assignment Tasks 1–3 body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; max-width: 900px; margin: 2rem auto; padding: 0 1rem; color: #222; } h1, h2, h3 { border-bottom: 1px solid #ddd; padding-bottom: 0.3em; } code, pre { background: #f6f8fa; padding: 0.2em 0.4em; border-radius: 4px; font-family: monospace; } pre { padding: 1em; overflow-x: auto; } ul { margin-left: 1.5em; } .screenshot { border: 2px dashed #aaa; padding: 2rem; text-align: center; color: #666; margin: 1rem 0; }
+ Zig Fiber Scheduler Assignment
 
-Zig Fiber Scheduler – Tasks 1, 2, and 3
-=======================================
+Zig Fiber Scheduler
+===================
 
-This project implements a cooperative user-space fiber scheduler in [Zig](https://ziglang.org/). The assignment is divided into three incremental tasks, each building on the previous one.
+* * *
 
-**Environment:**
+Environment
+-----------
 
-*   Zig version: **0.15.2**
-*   Platform: **Linux x86\_64**
+*   **Language:** Zig 0.15.2
+*   **Platform:** Linux (x86\_64)
+*   **Architecture:** x86-64 System V ABI
+*   **Context Library:** Provided `get_context` / `set_context` assembly library
 
 * * *
 
 Overview
 --------
 
-The goal of this assignment is to understand how cooperative multitasking can be implemented without operating system threads. Fibers are lightweight execution contexts that explicitly yield control back to a scheduler.
-
-Across the three tasks, the project evolves from:
-
-*   Basic context switching
-*   A simple scheduler that runs fibers to completion
-*   A full cooperative scheduler supporting `yield` and shared data
+This project explores cooperative multitasking by manually saving and restoring CPU execution context in Zig. It starts with simple context switching experiments and gradually builds a fiber abstraction and a scheduler. The final result is a working user‑space fiber scheduler with explicit `yield` support. All scheduling is cooperative and non‑preemptive. The project demonstrates low‑level stack management and control flow manipulation.
 
 * * *
 
-Task 1 – Context Switching
---------------------------
+Explanation of the Provided Context Library
+-------------------------------------------
 
-### Objective
+The provided library exposes two low‑level functions:
 
-Task 1 focuses on understanding and using low-level context switching primitives. A `Context` structure is used to save and restore CPU register state.
+*   `get_context`: Saves the current CPU register state into a `Context` structure
+*   `set_context`: Restores a previously saved CPU register state and resumes execution
 
-### Key Concepts
-
-*   Saving instruction pointer (`rip`) and stack pointer (`rsp`)
-*   Manually managing stacks
-*   Switching execution using `get_context` and `set_context`
-
-### Result
-
-By the end of Task 1, execution can jump between two contexts, proving that user-space context switching is working correctly.
+Together, these functions allow programs to pause execution at one point and resume later from the exact same instruction. This mechanism forms the foundation for implementing fibers and cooperative scheduling.
 
 * * *
 
-Task 2 – Basic Fiber Scheduler
-------------------------------
+Task 1a – Saving and Restoring Context
+--------------------------------------
 
-### Objective
+Task 1a demonstrates the simplest use of `get_context` and `set_context`. The program saves the current execution context, prints a message, and then restores the context once. A global variable is used to ensure the restore happens only once.
 
-Task 2 introduces a **scheduler** that manages multiple fibers. Each fiber runs until completion and explicitly calls `fiber_exit` to return control to the scheduler.
-
-### Design
-
-*   Each fiber has its own stack and context
-*   The scheduler maintains a queue of fibers
-*   Fibers run one after another (no yielding yet)
-
-### Execution Model
-
-Scheduler
-  ├── Fiber A (runs → fiber\_exit)
-  └── Fiber B (runs → fiber\_exit)
-
-### Limitations
-
-Fibers cannot pause and resume. Once started, a fiber must run until it exits.
+This task proves that execution can jump backward in time by restoring CPU state, causing the same code to execute again without using loops or function calls.
 
 * * *
 
-Task 3 – Cooperative Yielding
------------------------------
+Task 1b – Switching to a New Stack
+----------------------------------
 
-### Objective
+Task 1b manually constructs a new execution context that runs a different function on a separate stack. A stack buffer is allocated manually, and the stack pointer (`rsp`) is set to the top of this buffer. The instruction pointer (`rip`) is set to a function that never returns.
 
-Task 3 extends the scheduler to support `yield`, allowing fibers to pause execution and resume later.
-
-### Key Features
-
-*   Fibers can yield control back to the scheduler
-*   Yielded fibers are re-queued
-*   Shared data can be accessed via `get_data()`
-
-### Yield Semantics
-
-When a fiber calls `yield`:
-
-1.  The fiber’s context is saved
-2.  The fiber is placed back into the scheduler queue
-3.  The scheduler resumes and runs another fiber
-
-### Example Scenario
-
-fiber 1 before
-fiber 2
-fiber 1 after
-
-This demonstrates cooperative multitasking without preemption.
+Calling `set_context` transfers execution to this new function as if it were a new thread, demonstrating full control over program flow.
 
 * * *
 
-Shared Data Between Fibers
---------------------------
+Task 1c – Chaining Context Switches
+-----------------------------------
 
-Fibers can share data through the scheduler using `get_data()`. This enables patterns such as:
+Task 1c extends the previous idea by creating two independent execution contexts. Execution begins in one function (`foo`) and then switches directly into another function (`goo`) using `set_context`, without returning.
 
-*   Producer / consumer
-*   Incremental state updates
-*   Message passing via shared memory
+This task demonstrates that multiple independent execution contexts can exist and transfer control explicitly. It forms the conceptual basis for implementing fibers.
 
-Because scheduling is cooperative, data races are avoided as long as fibers yield at well-defined points.
+* * *
+
+Task 2 – Fiber Abstraction and Basic Scheduler
+----------------------------------------------
+
+### Fiber
+
+The `Fiber` abstraction wraps a `Context`, a stack, and optional user data. Each fiber represents a lightweight execution unit with its own stack and entry function. The stack is manually aligned to 16 bytes and adjusted to respect the x86‑64 red zone.
+
+### Scheduler
+
+The scheduler maintains a queue of fibers and a scheduler context. It switches into a fiber using `set_context` and regains control when the fiber calls `fiber_exit`. The scheduler is cooperative: fibers must explicitly give control back.
+
+### Main Program
+
+The main program initializes the scheduler, creates two fibers with separate stacks, and passes shared data to them. Each fiber runs to completion before returning control to the scheduler.
+
+This task establishes a minimal but functional fiber scheduler where fibers run sequentially.
+
+* * *
+
+Task 3 – Yielding and Cooperative Scheduling
+--------------------------------------------
+
+### Motivation
+
+In Task 2, fibers run until completion. Task 3 adds `yield`, allowing a fiber to pause execution and allow other fibers to run. This enables cooperative multitasking patterns such as producer–consumer workflows.
+
+### Yield Implementation
+
+The `yield` function saves the current fiber’s context using `get_context`. On the first pass, the fiber’s context is saved and the scheduler regains control. When the scheduler later resumes the fiber, execution continues after the `yield` call.
+
+A key detail is the flipped return value check from `get_context`, which distinguishes between the first save and the resumed execution.
+
+### Scheduler Changes
+
+The scheduler loop is modified to repeatedly run fibers until the queue is empty. Yielded fibers are re‑queued, while exited fibers are discarded. This creates round‑robin cooperative scheduling.
+
+### Demonstration
+
+Two fibers share an integer value. The first fiber modifies the value, yields, then resumes later. The second fiber observes the updated value and exits. This demonstrates correct yielding, resumption, and shared state.
 
 * * *
 
 Build and Run
 -------------
 
-### Build
-
 zig build
-
-### Run Task 3
-
+zig build run-task1
+zig build run-task2
 zig build run-task3
 
 * * *
@@ -129,22 +116,13 @@ zig build run-task3
 Output Example
 --------------
 
-fiber 1 before: 10
-fiber 2: 11
-fiber 1 after: 11
+(Screenshot placeholder)
 
-* * *
-
-Screenshots
------------
-
-Screenshot placeholder – add terminal output screenshots here
+![Program output screenshot](screenshot.png)
 
 * * *
 
 Conclusion
 ----------
 
-This assignment demonstrates how cooperative multitasking can be implemented entirely in user space using Zig. By progressively building from raw context switching to a yielding scheduler, the project provides a deep understanding of execution control, stacks, and scheduler design.
-
-The final result is a small but fully functional fiber system suitable for experimentation and learning.
+This project demonstrates how cooperative multitasking can be implemented entirely in user space. By manually controlling stacks and CPU context, we build a fiber system from first principles. The final scheduler supports yielding, shared data, and predictable execution flow.
