@@ -9,7 +9,7 @@ pub const Scheduler = struct {
     current_fiber: ?*Fiber = null,
 
     pub fn init(allocator: std.mem.Allocator) Scheduler {
-        return Scheduler{
+        return .{
             .allocator = allocator,
         };
     }
@@ -19,35 +19,30 @@ pub const Scheduler = struct {
     }
 
     pub fn do_it(self: *Scheduler) void {
-        if (ctx.get_context(&self.context) != 0) return;
+        // Save scheduler context ONCE
+        if (ctx.get_context(&self.context) != 0) {
+            // resumed from a fiber
+        }
 
         while (self.fibers.items.len > 0) {
             const f = self.fibers.orderedRemove(0);
             self.current_fiber = f;
             ctx.set_context(&f.context);
-
-            // Returned from yield or exit
-            if (self.current_fiber != null) {
-                // Fiber yielded — it was re-queued in yield()
-                self.current_fiber = null;
-            }
-            // else: fiber exited
+            // execution resumes here after yield or exit
         }
     }
 
     pub fn yield(self: *Scheduler) void {
-        if (self.current_fiber) |cf| {
-            const ret = ctx.get_context(&cf.context);
+        const f = self.current_fiber.?;
+        self.current_fiber = null;
 
-            if (ret == 0) {
-                // First time at yield point
-                self.fibers.append(self.allocator, cf) catch unreachable;
-                self.current_fiber = null;
-                ctx.set_context(&self.context);
-                unreachable;
-            }
-            // else: resumed after yield — continue
+        // IMPORTANT: flipped condition
+        if (ctx.get_context(&f.context) != 0) {
+            // resumed after yield
+            self.fibers.append(self.allocator, f) catch unreachable;
+            ctx.set_context(&self.context);
         }
+        // first time: just saved context, fall into scheduler
     }
 
     pub fn fiber_exit(self: *Scheduler) noreturn {
@@ -61,10 +56,11 @@ pub const Scheduler = struct {
     }
 };
 
-// Global scheduler instance
+// --------------------
+// Global API
+// --------------------
 pub var scheduler: Scheduler = undefined;
 
-// Global API
 pub fn spawn(f: *Fiber) void {
     scheduler.spawn(f);
 }
